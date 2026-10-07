@@ -8,7 +8,12 @@ import com.example.expense_management.mapper.EmployeeMapper;
 import com.example.expense_management.repository.EmployeeRepository;
 import com.example.expense_management.service.EmployeeService;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 import java.util.List;
 
 @Service
@@ -16,6 +21,9 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final EmployeeMapper employeeMapper;
+
+    private static final Logger log =
+            LoggerFactory.getLogger(EmployeeServiceImpl.class);
 
     public EmployeeServiceImpl(
             EmployeeRepository employeeRepository,
@@ -30,18 +38,12 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         Employee employee = employeeMapper.toEntity(request);
 
+        log.info("Creating employee with email: {}",
+                request.email());
+
         Employee savedEmployee = employeeRepository.save(employee);
 
         return employeeMapper.toResponse(savedEmployee);
-    }
-
-    @Override
-    public List<EmployeeResponse> getAllEmployees() {
-
-        return employeeRepository.findAll()
-                .stream()
-                .map(employeeMapper::toResponse)
-                .toList();
     }
 
     @Override
@@ -84,4 +86,24 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         employeeRepository.deleteById(id);
     }
+
+    @Override
+    public Page<EmployeeResponse> getAllEmployees(
+            int page,
+            int size,
+            String sortBy,
+            String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable =
+                PageRequest.of(page, size, sort);
+
+        return employeeRepository
+                .findAll(pageable)
+                .map(employeeMapper::toResponse);
+    }
+
 }
